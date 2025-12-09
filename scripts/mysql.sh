@@ -139,5 +139,14 @@ mysql -e "CREATE USER 'ftp'@'172.31.%.%' IDENTIFIED BY 'Contraseña';"
 mysql -e "GRANT ALL PRIVILEGES ON ftp_users.* TO 'ftp'@'172.31.%.%';"
 mysql -e "FLUSH PRIVILEGES;"
 
+mysql -e "USE ftp_users;
+CREATE TABLE users (
+    id INT AUTO_INCREMENT PRIMARY KEY,
+    username VARCHAR(50) NOT NULL,
+    password VARCHAR(255) NOT NULL,
+    directory VARCHAR(255) NOT NULL
+);
+INSERT INTO users (username, password, directory)
+VALUES ('diego', 'pass123', '/home/ftp/diego');"
 
 echo "mySQL instalado"

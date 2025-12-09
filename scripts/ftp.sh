@@ -31,29 +31,23 @@ utf8_filesystem=YES
 guest_enable=YES
 guest_username=ftp
 
-user_sub_token=$USER
-local_root=/home/ftp/$USER
+user_sub_token=\$USER
+local_root=/home/ftp/\$USER
 
+pasv_address=${ftp_public_ip}
+virtual_use_local_privs=YES
 EOF
 
 mv "/etc/pam.d/vsftpd" "/etc/pam.d/vsftpd.old"
 cat <<EOF > /etc/pam.d/vsftpd
-# Standard behaviour for ftpd(8).
-#auth	required	pam_listfile.so item=user sense=deny file=/etc/ftpusers onerr=succeed
-
-# Note: vsftpd handles anonymous logins on its own. Do not enable pam_ftp.so.
-
-# Standard pam includes
-#@include common-account
-#@include common-session
-#@include common-auth
-#auth	required	pam_shells.so
-
 auth    required pam_mysql.so user=ftp passwd=Contraseña host=172.31.92.246 db=ftp_users table=users usercolumn=username passwdcolumn=password crypt=0
 account required pam_mysql.so user=ftp passwd=Contraseña host=172.31.92.246 db=ftp_users table=users usercolumn=username passwdcolumn=password crypt=0
-
 EOF
+
+mkdir -p /home/ftp/diego
+sudo chmod -R 755 /home/ftp
+sudo chown -R ftp:ftp /home/ftp
 
 systemctl restart vsftpd
 
-echo "vsftpd configurado"
+echo "vsftpd configurado con IP: ${ftp_public_ip}"

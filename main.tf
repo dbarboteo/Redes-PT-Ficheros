@@ -143,30 +143,57 @@ resource "aws_instance" "ubuntu_ftp" {
   key_name               = "PRACTICA-REDES"
   private_ip             = "172.31.92.247"
 
-  user_data = file("${path.module}/scripts/ftp.sh")
+  user_data = templatefile("${path.module}/scripts/ftp.sh", {
+    ftp_public_ip = aws_eip.ftp_eip.public_ip
+  })
+  
+  user_data_replace_on_change = true
 
   tags = {
     Name = "PT-FTP"
   }
+  
+  lifecycle {
+    ignore_changes = [user_data]
+  }
 }
 
-# Outputs
-output "bd_public_ip" {
-  value = aws_instance.ubuntu_bd.public_ip
+# Elastic IP para FTP (se crea primero, sin asignar)
+resource "aws_eip" "ftp_eip" {
+  domain = "vpc"
+
+  tags = {
+    Name = "PT-FTP-EIP"
+  }
 }
 
-output "bd_private_ip" {
-  value = aws_instance.ubuntu_bd.private_ip
+# Asociación de la Elastic IP a la instancia
+resource "aws_eip_association" "ftp_eip_assoc" {
+  instance_id   = aws_instance.ubuntu_ftp.id
+  allocation_id = aws_eip.ftp_eip.id
 }
 
-output "ftp_public_ip" {
-  value = aws_instance.ubuntu_ftp.public_ip
-}
+# # Outputs
+# output "bd_public_ip" {
+#   value = aws_instance.ubuntu_bd.public_ip
+# }
 
-output "ftp_private_ip" {
-  value = aws_instance.ubuntu_ftp.private_ip
-}
+# output "bd_private_ip" {
+#   value = aws_instance.ubuntu_bd.private_ip
+# }
 
-output "subnet_id_used" {
-  value = aws_instance.ubuntu_bd.subnet_id
-}
+# output "ftp_public_ip" {
+#   value = aws_eip.ftp_eip.public_ip
+# }
+
+# output "ftp_private_ip" {
+#   value = aws_instance.ubuntu_ftp.private_ip
+# }
+
+# output "ftp_elastic_ip" {
+#   value = aws_eip.ftp_eip.public_ip
+# }
+
+# output "subnet_id_used" {
+#   value = aws_instance.ubuntu_bd.subnet_id
+# }
