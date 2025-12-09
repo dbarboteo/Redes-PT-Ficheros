@@ -35,6 +35,11 @@ Con esto habremos configurado todo lo necesario por parte de la instancia encarg
 - Cambiar el archivo de configuracion `/etc/pam.d/vsftpd`, eliminaremos o comentaremos el contenido que hay en el por defecto, y lo reemplazaremos con lo siguiente  
 ![alt text](./imagenes/image-7.png)
 
+- Crear el directorio del usuario insertado en la bd y darle los permisos necesarios `mkdir -p /home/ftp/diego`  
+`sudo chmod -R 755 /home/ftp`  
+`sudo chown -R ftp:ftp /home/ftp`
+
+
 - Por ultimo, asignaremos una IP elástica a nuestra instancia que contiene el servicio FTP, para ello:  
 ![alt text](./imagenes/image-8.png)
 
