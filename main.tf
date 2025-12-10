@@ -1,3 +1,22 @@
+# Generar clave SSH automáticamente
+resource "tls_private_key" "ssh_key" {
+  algorithm = "RSA"
+  rsa_bits  = 4096
+}
+
+# Crear key pair en AWS
+resource "aws_key_pair" "terraform_key" {
+  key_name   = "terraform-key-${formatdate("YYYYMMDD-hhmm", timestamp())}"
+  public_key = tls_private_key.ssh_key.public_key_openssh
+}
+
+# Guardar la clave privada localmente
+resource "local_file" "private_key" {
+  content         = tls_private_key.ssh_key.private_key_pem
+  filename        = "${path.module}/terraform-key.pem"
+  file_permission = "0400"
+}
+
 terraform {
   required_version = ">= 1.5.0"
 
@@ -5,6 +24,14 @@ terraform {
     aws = {
       source  = "hashicorp/aws"
       version = ">= 5.0"
+    }
+    tls = {
+      source  = "hashicorp/tls"
+      version = "~> 4.0"
+    }
+    local = {
+      source  = "hashicorp/local"
+      version = "~> 2.0"
     }
   }
 }
@@ -118,14 +145,22 @@ resource "aws_security_group" "sg_ftp" {
   }
 }
 
+# Elastic IP para FTP (se crea primero, sin asignar)
+resource "aws_eip" "ftp_eip" {
+  domain = "vpc"
+
+  tags = {
+    Name = "PT-FTP-EIP"
+  }
+}
+
 # Instancia BD
 resource "aws_instance" "ubuntu_bd" {
   ami                    = data.aws_ami.ubuntu_2404.id
   instance_type          = "t2.micro"
   subnet_id              = data.aws_subnets.default_subnets.ids[0]
   vpc_security_group_ids = [aws_security_group.sg_bd.id]
-  key_name               = "PRACTICA-REDES"
-  private_ip             = "172.31.92.246"
+  key_name               = aws_key_pair.terraform_key.key_name
 
   user_data = file("${path.module}/scripts/mysql.sh")
 
@@ -140,11 +175,11 @@ resource "aws_instance" "ubuntu_ftp" {
   instance_type          = "t2.micro"
   subnet_id              = data.aws_subnets.default_subnets.ids[0]
   vpc_security_group_ids = [aws_security_group.sg_ftp.id]
-  key_name               = "PRACTICA-REDES"
-  private_ip             = "172.31.92.247"
+  key_name               = aws_key_pair.terraform_key.key_name
 
   user_data = templatefile("${path.module}/scripts/ftp.sh", {
     ftp_public_ip = aws_eip.ftp_eip.public_ip
+    bd_private_ip = aws_instance.ubuntu_bd.private_ip
   })
   
   user_data_replace_on_change = true
@@ -158,42 +193,48 @@ resource "aws_instance" "ubuntu_ftp" {
   }
 }
 
-# Elastic IP para FTP (se crea primero, sin asignar)
-resource "aws_eip" "ftp_eip" {
-  domain = "vpc"
-
-  tags = {
-    Name = "PT-FTP-EIP"
-  }
-}
-
 # Asociación de la Elastic IP a la instancia
 resource "aws_eip_association" "ftp_eip_assoc" {
   instance_id   = aws_instance.ubuntu_ftp.id
   allocation_id = aws_eip.ftp_eip.id
 }
 
-# # Outputs
-# output "bd_public_ip" {
-#   value = aws_instance.ubuntu_bd.public_ip
-# }
+# Outputs
+output "bd_public_ip" {
+  value = aws_instance.ubuntu_bd.public_ip
+}
 
-# output "bd_private_ip" {
-#   value = aws_instance.ubuntu_bd.private_ip
-# }
+output "bd_private_ip" {
+  value = aws_instance.ubuntu_bd.private_ip
+}
 
-# output "ftp_public_ip" {
-#   value = aws_eip.ftp_eip.public_ip
-# }
+output "ftp_public_ip" {
+  value = aws_eip.ftp_eip.public_ip
+}
 
-# output "ftp_private_ip" {
-#   value = aws_instance.ubuntu_ftp.private_ip
-# }
+output "ftp_private_ip" {
+  value = aws_instance.ubuntu_ftp.private_ip
+}
 
-# output "ftp_elastic_ip" {
-#   value = aws_eip.ftp_eip.public_ip
-# }
+output "ftp_elastic_ip" {
+  value = aws_eip.ftp_eip.public_ip
+}
 
-# output "subnet_id_used" {
-#   value = aws_instance.ubuntu_bd.subnet_id
-# }
+output "subnet_id_used" {
+  value = aws_instance.ubuntu_bd.subnet_id
+}
+
+output "ssh_private_key_path" {
+  value = local_file.private_key.filename
+  description = "Ruta al archivo de clave privada SSH"
+}
+
+output "ssh_connection_bd" {
+  value = "ssh -i ${local_file.private_key.filename} ubuntu@${aws_instance.ubuntu_bd.public_ip}"
+  description = "Comando para conectar a la instancia BD"
+}
+
+output "ssh_connection_ftp" {
+  value = "ssh -i ${local_file.private_key.filename} ubuntu@${aws_eip.ftp_eip.public_ip}"
+  description = "Comando para conectar a la instancia FTP"
+}

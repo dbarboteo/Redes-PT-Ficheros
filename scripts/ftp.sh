@@ -40,8 +40,8 @@ EOF
 
 mv "/etc/pam.d/vsftpd" "/etc/pam.d/vsftpd.old"
 cat <<EOF > /etc/pam.d/vsftpd
-auth    required pam_mysql.so user=ftp passwd=Contraseña host=172.31.92.246 db=ftp_users table=users usercolumn=username passwdcolumn=password crypt=0
-account required pam_mysql.so user=ftp passwd=Contraseña host=172.31.92.246 db=ftp_users table=users usercolumn=username passwdcolumn=password crypt=0
+auth    required pam_mysql.so user=ftp passwd=Contraseña host=${bd_private_ip} db=ftp_users table=users usercolumn=username passwdcolumn=password crypt=0
+account required pam_mysql.so user=ftp passwd=Contraseña host=${bd_private_ip} db=ftp_users table=users usercolumn=username passwdcolumn=password crypt=0
 EOF
 
 mkdir -p /home/ftp/diego
@@ -50,4 +50,4 @@ sudo chown -R ftp:ftp /home/ftp
 
 systemctl restart vsftpd
 
-echo "vsftpd configurado con IP: ${ftp_public_ip}"
+echo "vsftpd configurado con FTP IP pública: ${ftp_public_ip} y BD IP privada: ${bd_private_ip}"

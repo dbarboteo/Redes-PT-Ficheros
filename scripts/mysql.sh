@@ -7,6 +7,9 @@ apt-get install mariadb-server mariadb-client -y
 systemctl enable mariadb
 systemctl restart mariadb
 
+# Obtener la IP privada de la instancia
+PRIVATE_IP=$(hostname -I | awk '{print $1}')
+
 mv "/etc/mysql/mariadb.conf.d/50-server.cnf" "/etc/mysql/mariadb.conf.d/50-server.cnf.old"
 
 cat <<EOF > /etc/mysql/mariadb.conf.d/50-server.cnf
@@ -149,4 +152,4 @@ CREATE TABLE users (
 INSERT INTO users (username, password, directory)
 VALUES ('diego', 'pass123', '/home/ftp/diego');"
 
-echo "mySQL instalado"
+echo "mySQL instalado con IP privada: $PRIVATE_IP"
